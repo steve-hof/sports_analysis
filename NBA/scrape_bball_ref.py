@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup, SoupStrainer
+import re
 import sys
 import string
 import requests
@@ -8,19 +9,54 @@ import datetime
 # import progressbar2
 import time
 
-page_request = requests.get(url)
-soup = BeautifulSoup(page_request.text)
-wrap = soup.find('div', {'id': 'wrap'})
-content = wrap.find('div', {'id': 'content'})
-all_per_poss = content.find('div', {'id': 'all_per_poss'})
+# page_request = requests.get(url)
+# soup = BeautifulSoup(page_request.text)
+# wrap = soup.find('div', {'id': 'wrap'})
+# content = wrap.find('div', {'id': 'content'})
+# all_per_poss = content.find('div', {'id': 'all_per_poss'})
 
 
 def player_adv_stats(url):
-    '''
+    """
+    scrape players page - navigate to advanced stats table
 
-    :param url:
+    :param url: url for particular player
     :return: data frame with players adv statistics
-    '''
+
+    """
+    # Navigate to
+    base_url = 'http://www.basketball-reference.com'
+    full_url = base_url + url
+    comm = re.compile("<!--|-->")
+    page_request = requests.get(full_url, 'lxml')
+    soup = BeautifulSoup(re.sub("<!--|-->", "", page_request.text))
+    wrap = soup.find('div', {'id': 'wrap'})
+    content = wrap.find('div', {'id': 'content'})
+    all_adv = content.find('div', {'id': 'all_advanced'})
+    table = all_adv.find('table', {'id': 'advanced'})
+    t_foot = table.find('tfoot')
+    t_r = t_foot.find('tr')
+
+    pattern = r"\"([^{\"}]*)\""
+    col_list = []
+    stat_list = []
+    for row in t_r.findAll('td'):
+        stat_list.append(row.text)
+        row = str(row)
+        match = re.findall(pattern, row)
+        col_list.append(match[1])
+    col_list = col_list[4:]
+    stat_list = stat_list[4:]
+    cleaned_stat_list = []
+
+    for i, st in enumerate(stat_list):
+        try:
+            st = float(st)
+            cleaned_stat_list.append(st)
+        except:
+            print(f"fucking up at index {i}")
+    player_entry = dict(zip(col_list, cleaned_stat_list))
+    return player_entry
 
 
 def player_detail_info(url):
@@ -68,6 +104,8 @@ def player_detail_info(url):
             s = prow.text.replace('\n', '').split(':')
             if len(s) > 1:
                 draft = s[1].lstrip()
+
+        fill = 12
 
     # create dictionary with all of the info
     player_entry = {'url': url,
@@ -128,7 +166,6 @@ def player_info():
 
                 # append player dictionary
                 players.append(player_entry)
-                fill = 12
 
     df = pd.DataFrame(players)
     save_path = 'scraped_data/players_general_info_' + letter + '.csv'
@@ -139,8 +176,16 @@ def player_info():
 def main():
     players_general_info = player_info()  # call function that scrapes general info
 
+    player_adv_stats_list = []
+    for i, url in enumerate(players_general_info.url):
+        # try:
+        player_adv_stats_list.append(player_adv_stats(url))
+        # except:
+        #     print(f"can't load: {url}; location {i}")
+        time.sleep(0.1)
+        fill = 12
+
     players_details_info_list = []
-    # bar = progressbar2.ProgressBar(max_value=len(players_general_info))
     for i, url in enumerate(players_general_info.url):
         try:
             players_details_info_list.append(player_detail_info(url))
@@ -150,17 +195,9 @@ def main():
         time.sleep(0.1)
     players_detail_df = pd.DataFrame(players_details_info_list)  # convert to dataframe
     players_df = players_general_info.merge(players_detail_df, how='outer', on='url')
-
-    players_adv_stats_list = []
-    for i, url in enumerate(players_general_info.url):
-        try:
-            players_adv_stats_list.append(player_adv_stats(url))
-        except:
-            print('cannot load: %s; location %d' % (url, i))
-        # bar.update(i)
-        time.sleep(0.1)
-
     fill = 12
+
+
 
 if __name__ == '__main__':
     main()
