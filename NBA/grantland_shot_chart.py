@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+Most of this has been taken from http://www.eyalshafran.com/scraping_basketball_reference.html
+I am using it to learn from while I try to build my own scraper that doesn't require
+the NBAapi
+"""
+
 import pandas as pd
 import NBAapi as nba
 import numpy as np

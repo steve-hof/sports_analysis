@@ -5,15 +5,65 @@ import re
 import sys
 import string
 import requests
-import datetime
-# import progressbar2
-import time
 
-# page_request = requests.get(url)
-# soup = BeautifulSoup(page_request.text)
-# wrap = soup.find('div', {'id': 'wrap'})
-# content = wrap.find('div', {'id': 'content'})
-# all_per_poss = content.find('div', {'id': 'all_per_poss'})
+last_letter = 'c'
+save_path = 'scraped_data/players_stats_' + last_letter + '.csv'
+
+
+def player_info():
+    '''
+    This function web scrapes basketball-reference and extracts player's info.
+    '''
+    players = []
+    base_url = 'http://www.basketball-reference.com/players/'
+
+    # get player tables from alphabetical list pages
+    # for letter in string.ascii_lowercase:
+    for letter in last_letter:
+        page_request = requests.get(base_url + letter)
+        soup = BeautifulSoup(page_request.text, "lxml")
+        # find table in soup
+        table = soup.find('table')
+
+        if table:
+            table_body = table.find('tbody')
+
+            # loop over list of players
+            for row in table_body.findAll('tr'):
+                # get name and url
+                player_url = row.find('a')
+                player_names = player_url.text
+                player_pages = player_url['href']
+
+                # get some player's info from table
+                cells = row.findAll('td')
+                active_from = int(cells[0].text)
+                active_to = int(cells[1].text)
+                position = cells[2].text
+                height = cells[3].text
+                weight = cells[4].text
+                birth_date = cells[5].text
+                college = cells[6].text
+
+                # create entry
+                player_entry = {'url': player_pages,
+                                'name': player_names,
+                                'active_from': active_from,
+                                'active_to': active_to,
+                                'position': position,
+                                'college': college,
+                                'height': height,
+                                'weight': weight,
+                                'birth_date': birth_date}
+
+                # append player dictionary
+                players.append(player_entry)
+
+    df = pd.DataFrame(players)
+    cols = ['name', 'active_from', 'active_to', 'birth_date', 'college', 'height',
+            'position', 'url', 'weight']
+    df = df[cols]
+    return df
 
 
 def player_adv_stats(url):
@@ -56,6 +106,7 @@ def player_adv_stats(url):
         except:
             print(f"fucking up at index {i}")
     player_entry = dict(zip(col_list, cleaned_stat_list))
+    player_entry['url'] = url
     return player_entry
 
 
@@ -118,85 +169,35 @@ def player_detail_info(url):
     return player_entry
 
 
-def player_info():
-    '''
-    This function web scrapes basketball-reference and extracts player's info.
-    '''
-    players = []
-    base_url = 'http://www.basketball-reference.com/players/'
-
-    # get player tables from alphabetical list pages
-    # for letter in string.ascii_lowercase:
-    for letter in 'q':
-        page_request = requests.get(base_url + letter)
-        soup = BeautifulSoup(page_request.text, "lxml")
-        # find table in soup
-        table = soup.find('table')
-
-        if table:
-            table_body = table.find('tbody')
-
-            # loop over list of players
-            for row in table_body.findAll('tr'):
-                # get name and url
-                player_url = row.find('a')
-                player_names = player_url.text
-                player_pages = player_url['href']
-
-                # get some player's info from table
-                cells = row.findAll('td')
-                active_from = int(cells[0].text)
-                active_to = int(cells[1].text)
-                position = cells[2].text
-                height = cells[3].text
-                weight = cells[4].text
-                birth_date = cells[5].text
-                college = cells[6].text
-
-                # create entry
-                player_entry = {'url': player_pages,
-                                'name': player_names,
-                                'active_from': active_from,
-                                'active_to': active_to,
-                                'position': position,
-                                'college': college,
-                                'height': height,
-                                'weight': weight,
-                                'birth_date': birth_date}
-
-                # append player dictionary
-                players.append(player_entry)
-
-    df = pd.DataFrame(players)
-    save_path = 'scraped_data/players_general_info_' + letter + '.csv'
-    df.to_csv(save_path, index=False)
-    return df
-
-
 def main():
     players_general_info = player_info()  # call function that scrapes general info
 
+    # Get advanced stats for player
     player_adv_stats_list = []
     for i, url in enumerate(players_general_info.url):
-        # try:
-        player_adv_stats_list.append(player_adv_stats(url))
-        # except:
-        #     print(f"can't load: {url}; location {i}")
-        time.sleep(0.1)
-        fill = 12
+        try:
+            player_adv_stats_list.append(player_adv_stats(url))
+        except:
+            print(f"can't load: {url}; location {i}")
+    temp_players_adv_df = pd.DataFrame(player_adv_stats_list)
 
+    # Get player detail information
     players_details_info_list = []
     for i, url in enumerate(players_general_info.url):
+
         try:
             players_details_info_list.append(player_detail_info(url))
         except:
             print('cannot load: %s; location %d' % (url, i))
-        # bar.update(i)
-        time.sleep(0.1)
-    players_detail_df = pd.DataFrame(players_details_info_list)  # convert to dataframe
-    players_df = players_general_info.merge(players_detail_df, how='outer', on='url')
-    fill = 12
+    temp_players_detail_df = pd.DataFrame(players_details_info_list)  # convert to dataframe
 
+    # Combine data frames
+    temp_df = players_general_info.merge(temp_players_detail_df, how='outer', on='url')
+    full_df = temp_df.merge(temp_players_adv_df, how='outer', on='url')
+
+    # Save to csv file
+    full_df.to_csv(save_path, index=False)
+    fill = 12
 
 
 if __name__ == '__main__':
