@@ -104,7 +104,7 @@ def player_adv_stats(url):
             st = float(st)
             cleaned_stat_list.append(st)
         except:
-            print(f"fucking up at index {i}")
+            print(f"messing up at index {i}")
     player_entry = dict(zip(col_list, cleaned_stat_list))
     player_entry['url'] = url
     return player_entry
@@ -184,7 +184,6 @@ def main():
     # Get player detail information
     players_details_info_list = []
     for i, url in enumerate(players_general_info.url):
-
         try:
             players_details_info_list.append(player_detail_info(url))
         except:
