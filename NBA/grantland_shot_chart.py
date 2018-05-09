@@ -2,8 +2,8 @@
 
 """
 Most of this has been taken from http://www.eyalshafran.com/scraping_basketball_reference.html
-I am using it to learn from while I try to build my own scraper that doesn't require
-the NBAapi
+but uses NBAapi to scrape data.I am using it to learn from while I try to build my own scraper 
+that doesn't require the NBAapi
 """
 
 import pandas as pd
@@ -24,10 +24,9 @@ from ipywidgets import interact
 base_path = 'figures/grantland_shot_charts/'
 
 
+# creates a list of NBA seasons from start-end
 def seasons_string(start, end):
-    '''
-    creates a list of NBA seasons from start-end
-    '''
+
     years = np.arange(start, end + 1)
     seasons = []
     for year in years:
@@ -38,11 +37,10 @@ def seasons_string(start, end):
     return seasons
 
 
+# Uses shot coordinates x and y (in feet - divide by 10 if using the shotchart units)
+# and returns a tuple with the zone location
 def shot_zone(X, Y):
-    '''
-    Uses shot coordinates x and y (in feet - divide by 10 if using the shotchart units)
-    and returns a tuple with the zone location
-    '''
+
     r = np.sqrt(X ** 2 + Y ** 2)
     a = np.arctan2(Y, X) * 180.0 / np.pi
     if (Y < 0) & (X > 0):
@@ -90,14 +88,11 @@ def shot_zone(X, Y):
     return z
 
 
+# Get image of player from nba.com
 def players_picture(player_id):
-    '''
-    Input: player ID
-    Output: players picture
-    '''
-    URL = "http://stats.nba.com/media/players/230x185/%d.png" % player_id
-    file = io.BytesIO(urllib.request.urlopen(URL).read())
-    # with urllib.request.urlopen(URL) as response:
+    url = "http://stats.nba.com/media/players/230x185/%d.png" % player_id
+    file = io.BytesIO(urllib.request.urlopen(url).read())
+    # with urllib.request.urlopen(url) as response:
     #     html = response.read()
     # file = io.StringIO(html)
     return misc.imread(file)
