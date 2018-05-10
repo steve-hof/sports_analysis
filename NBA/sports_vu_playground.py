@@ -50,19 +50,23 @@ def get_pbp_game_data(data):
 def main():
     json_data = open('/Users/stevehof/school/comp/fun/Winning_in_Sports_with_Data/'
                      'NBA/scraped_data/sports_vu_2016.json')
+    """
 
-    # dictionary with three keys: ['gamedate', gameid', 'events']
+    Json_data is a dict w/ 3 keys: ['gamedate', gameid', 'events']
+    
+    Each event has 4 keys: ['eventId', 'visitor', 'home', 'moments']
+
+    The numbers, for a moment, in order, are:
+    1) quarter number.
+    2) time of the event in milliseconds.
+    3) number of seconds left in the quarter
+    4) number of seconds left on the shot clock.
+    No clue what 'none' represents, haha
+    
+    """
+
     data = json.load(json_data)
-
-    # events have four keys: ['eventId', 'visitor', 'home', 'moments']
     first_event = data['events'][0].keys()
-
-    # First moment of the first event (the numbers, in order are):
-    # 1) quarter number.
-    # 2) time of the event in milliseconds.
-    # 3) number of seconds left in the quarter
-    # 4) number of seconds left on the shot clock.
-    # No clue what 'none' represents, haha
     first_moment = data['events'][0]['moments'][0]
     play_by_play_df = get_pbp_game_data(data)
 
@@ -72,7 +76,11 @@ def main():
                   8: 'Substitution', 9: 'Timeout', 10: 'Jump Ball',
                   12: '?-start quarter 1', 13: '?- start quarter2'}
 
-
+    play_by_play_df['EVENTDESCR'] = play_by_play_df['EVENTMSGTYPE'].map(event_dict)
+    cols = ['EVENTNUM', 'EVENTMSGTYPE', 'EVENTDESCR', 'HOMEDESCRIPTION',
+            'VISITORDESCRIPTION','TEAM']
+    play_by_play_df = play_by_play_df[cols]
+    print(play_by_play_df.columns)
     fill = 2
 
 
