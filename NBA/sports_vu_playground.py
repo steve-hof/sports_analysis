@@ -44,7 +44,22 @@ def get_pbp_game_data(data):
     df['TEAM'] = df['PLAYER1_TEAM_ABBREVIATION']
     df.drop('PLAYER1_TEAM_ABBREVIATION', inplace=True, axis=1)
 
+    # make dictionary so I don't have to memorize event type codes
+    event_dict = {1: 'Make', 2: 'Miss', 3: 'Free Throw', 4: 'Rebound',
+                  5: 'OB or T/O or Steal', 6: 'Personal Foul', 7: 'Violation',
+                  8: 'Substitution', 9: 'Timeout', 10: 'Jump Ball',
+                  12: '?-start quarter 1', 13: '?- start quarter2'}
+    df['EVENTDESCR'] = df['EVENTMSGTYPE'].map(event_dict)
+    cols = ['EVENTNUM', 'EVENTMSGTYPE', 'EVENTDESCR', 'HOMEDESCRIPTION',
+            'VISITORDESCRIPTION', 'TEAM']
+    df = df[cols]
     return df
+
+
+def draw_court(axis):
+    import matplotlib.image as mpimg
+    img = mpimg.imread('./nba_court_T.png')  # ot this image from gmf05's github.
+    plt.imshow(img, extent=axis, zorder=0)  # show the image.
 
 
 def main():
@@ -70,17 +85,16 @@ def main():
     first_moment = data['events'][0]['moments'][0]
     play_by_play_df = get_pbp_game_data(data)
 
-    # make dictionary so I don't have to memorize event type codes
-    event_dict = {1: 'Make', 2: 'Miss', 3: 'Free Throw', 4: 'Rebound',
-                  5: 'OB or T/O or Steal', 6: 'Personal Foul', 7: 'Violation',
-                  8: 'Substitution', 9: 'Timeout', 10: 'Jump Ball',
-                  12: '?-start quarter 1', 13: '?- start quarter2'}
+    # Create players dataframe for access to jersey number during animation
+    blah = data['events'][0]['home']['players']
+    player_cols = data['events'][0]['home']['players'][0].keys()
+    home_players_df = pd.DataFrame(data=[i for i in data['events'][0]['home']['players']],
+                                   columns=player_cols)
+    visitor_players_df = pd.DataFrame(data=[i for i in data['events'][0]['visitor']['players']],
+                                      columns=player_cols)
+    players_df = pd.merge(home_players_df, visitor_players_df, how='outer')
+    jersey_dict = dict(zip(players_df.playerid.values, players_df.jersey.values))
 
-    play_by_play_df['EVENTDESCR'] = play_by_play_df['EVENTMSGTYPE'].map(event_dict)
-    cols = ['EVENTNUM', 'EVENTMSGTYPE', 'EVENTDESCR', 'HOMEDESCRIPTION',
-            'VISITORDESCRIPTION','TEAM']
-    play_by_play_df = play_by_play_df[cols]
-    print(play_by_play_df.columns)
     fill = 2
 
 
