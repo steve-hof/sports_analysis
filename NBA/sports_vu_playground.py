@@ -58,8 +58,27 @@ def get_pbp_game_data(data):
 
 def draw_court(axis):
     import matplotlib.image as mpimg
-    img = mpimg.imread('./nba_court_T.png')  # ot this image from gmf05's github.
+    img = mpimg.imread('scraped_data/nba_court_T.png')  # ot this image from gmf05's github.
     plt.imshow(img, extent=axis, zorder=0)  # show the image.
+
+
+# This builds the base of the plot that the animation will take place on top of
+def init_plot():
+    # ten players on the court
+    for i in range(10):
+        pass
+
+
+def find_moment(data, id):
+    for i, events in enumerate(data['events']):
+        if events['eventId'] == str(id):
+            moment = i
+            break
+    return moment
+
+
+def animate(player_xy, n):
+    pass
 
 
 def main():
@@ -78,6 +97,18 @@ def main():
     4) number of seconds left on the shot clock.
     No clue what 'none' represents, haha
     
+    Then there is another matrix (11x5) where each row is:
+    [0] Location of the ball
+    [1:5] Locations of each of 5 home team players
+    [6:11] Locations of each of 5 visitor team players
+    
+    The columns are:
+    [0] Team ID (-1 for ball)
+    [1] Player ID (-1 for ball)
+    [2] x coordinate
+    [3] y coordinate
+    [4] z coordinate
+    
     """
 
     data = json.load(json_data)
@@ -85,7 +116,7 @@ def main():
     first_moment = data['events'][0]['moments'][0]
     play_by_play_df = get_pbp_game_data(data)
 
-    # Create players dataframe for access to jersey number during animation
+    # Create players data frame for access to jersey number during animation
     blah = data['events'][0]['home']['players']
     player_cols = data['events'][0]['home']['players'][0].keys()
     home_players_df = pd.DataFrame(data=[i for i in data['events'][0]['home']['players']],
@@ -94,6 +125,19 @@ def main():
                                       columns=player_cols)
     players_df = pd.merge(home_players_df, visitor_players_df, how='outer')
     jersey_dict = dict(zip(players_df.playerid.values, players_df.jersey.values))
+
+    # Find proper event number
+    event_num = find_moment(data, 41)
+
+    # Create matrices for ball and player positions
+    ball_coords = np.array([x[5][0][2:5] for x in data['events'][event_num]['moments']])
+    player_coords = np.array([np.array(x[5][1:])[:, 1:4] for x in data['events'][event_num]['moments']])
+    print(ball_coords[0:10])
+    # Draw the court
+    fig = plt.figure(figsize=(15, 7.5))
+    ax = plt.gca()
+    draw_court([0, 100, 0, 50])
+    plt.show()
 
     fill = 2
 
